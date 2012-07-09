@@ -2,8 +2,7 @@ module ("regex", package.seeall)
 local lpeg = require'lpeg'
 local compile = require'compile'
 
--- variaveis utilizadas para numeracao dos
--- nao terminais da peg resultante
+-- variable used to number the non-terminals of the final PEG
 local varnumber
 local casas
 local zeros
@@ -13,6 +12,7 @@ local tag = compile.gettag()
 
 local makeempty = compile.makeempty
 local makechar = compile.makechar
+local makerange = compile.makerange
 local makeset = compile.makeset
 local makeany = compile.makeany
 local makevar = compile.makevar
@@ -21,11 +21,8 @@ local makeord = compile.makeord
 local makestar = compile.makestar
 local makeplus = compile.makeplus
 local makequest = compile.makequest
---<mod-lazy>
 local makelazy = compile.makelazy
---<mod-possv>
 local makepossv = compile.makepossv
---<mod-pred>
 local makenot = compile.makenot
 local makeand = compile.makeand
 
@@ -41,19 +38,24 @@ function ischar(p)
 	return cmpkind(p, tag.char)
 end
 
+function isrange(p)
+	return cmpkind(p, tag.range)
+end
+
 function isset(p)
 	return cmpkind(p, tag.set)
 end
 
--- tag.any representa o caractere que casa qualquer outro (".")
+-- tag.any represents the character that matches any (".")
 function isany(p)
 	return cmpkind(p, tag.any)
 end
 
--- quando o nó já tem valor fixo, não possui mais operações (terminal)
---<mod-capture>
+-- when the node has only a fixed value, having no more operators, that is, when
+-- this is a terminal node
 local function isterm(p)
-	return ischar(p) or isset(p) or isany(p) or isopencapt(p) or isclosecapt(p)
+	return ischar(p) or isrange(p) or isany(p) or isopencapt(p)
+		or isclosecapt(p) or isset(p)
 end
 
 function iscon(p)
@@ -80,26 +82,21 @@ function isquest(p)
 	return cmpkind(p, tag.quest)
 end
 
---<mod-lazy>
 function islazy(p)
 	return cmpkind(p, tag.lazy)
 end
 
---<mod-possv>
 function ispossv(p)
 	return cmpkind(p, tag.possv)
 end
 
---<mod-pred>
 function isand(p)
 	return cmpkind(p, tag.andp)
 end
---<mod-pred>
 function isnot(p)
 	return cmpkind(p, tag.notp)
 end
 
---<mod-capture>
 function isopencapt(p)
 	return cmpkind(p, tag.opencapt)
 end
@@ -134,13 +131,15 @@ function getOperator(p)
 	end
 end
 
--- imprime uma peg dada em forma de árvore
+-- print a PEG in the form of a tree
 function writepeg (p, incon)
-	-- percorre a árvore recursivamente
+	-- traverse the tree recursively
 	if ischar(p) then
 		return "'" .. p.v .. "'"
-	elseif isset(p) then
+	elseif isrange(p) then
 		return "[" .. p.v1 .. "-" .. p.v2 .. "]"
+	elseif isset(p) then 
+		return "[" .. p.v .. "]"
 	elseif isempty(p) then
 		return "''"
 	elseif isany(p) then
@@ -155,7 +154,6 @@ function writepeg (p, incon)
 		end
 	elseif iscon(p) then
 		return writepeg(p.p1, true) .. "" .. writepeg(p.p2, true)
-	--<mod-writepeg>
 	elseif isrept(p) then
 		local s = writepeg(p.p1)
 		local op = getOperator(p)
@@ -172,7 +170,6 @@ function writepeg (p, incon)
 		else
 			return op .. "(" .. s .. "("
 		end
-	--<mod-capture>
 	elseif isopencapt(p) then
 		--return '{' .. p.v
 		return '{'
@@ -185,13 +182,19 @@ function writepeg (p, incon)
 	end
 end
 
--- dada a peg em forma de árvore, retorna a peg
--- definida em termos da biblioteca lpeg
+-- given the PEG in a tree, return the PEG defined
+-- in terms of the lpeg library
 function makepeg (p)
 	if ischar(p) then
 		return lpeg.P(p.v)
-	elseif isset(p) then
+	elseif isrange(p) then
 		return lpeg.R(p.v1 .. p.v2)
+	elseif isset(p) then
+		if p.v:sub(1,1) ~= "^" then
+			return lpeg.S(p.v)
+		else
+			return lpeg.P(lpeg.P(1) - lpeg.S(p.v:sub(2)))
+		end
 	elseif isempty(p) then
 		return lpeg.P""
 	elseif isany(p) then
@@ -208,27 +211,23 @@ function makepeg (p)
 		return makepeg(p.p1)^-1
 	elseif isvar(p) then
 		return lpeg.V(p.v)
-	-- <mod-pred>
 	elseif isand(p) then
 		return #makepeg(p.p1)
-	-- <mod-pred>
 	elseif isnot(p) then
 		return -makepeg(p.p1)
-	--<mod-capture>
 	elseif isopencapt(p) then
 		return lpeg.Cc('open', p.v) * lpeg.Cp()
 	elseif isclosecapt(p) then
 		return lpeg.Cc('close') * lpeg.Cp()
-	-- quando essa funcao é chamada as tags se referem à sintaxe
-	-- de PEGs
+	-- when this function is called, all the tags refer to then
+	-- PEG syntax
 	else
 		error("Unknown kind: " .. p.kind)
 	end
 end
 
--- procura uma posicao qualquer
--- que esteja vazia na tabela g
--- é utilizada para nomear um não-terminal
+-- search for any free position in the table g
+-- this funtion is used to name a non-terminal
 local function getvar(g)
 	local n = 100000
 	local v = 'V' .. math.random(n)
@@ -238,7 +237,6 @@ local function getvar(g)
 	return v
 end
 
---<mod-getnextvar>
 local function getnextvar()
 	varnumber = varnumber + 1
 	if (varnumber == casas) then
@@ -248,8 +246,7 @@ local function getnextvar()
 	return 'V' .. zeros .. varnumber
 end
 
--- g é a gramatica (peg) a ser utilizada na avaliacao do padrao
--- g é a árvore que representa a PEG final
+-- g -> tree of the PEG used to evaluate the pattern
 function pi(g, p, k)
 	if isempty(p) then
 		return k
@@ -275,14 +272,11 @@ function pi(g, p, k)
 		local v = getnextvar()
 		g[v] = makeord(pi(g, p.p1, makevar(v)), k)
 		return pi(g, p.p1, makevar(v))
-	--<mod-lazy>
 	-- e1*?e2 ==> V <- e2 / e1V
 	elseif islazy(p) then
 		local v = getnextvar()
 		g[v] = makeord(k, pi(g, p.p1, makevar(v)))
 		return makevar(v)
-	--<mod-possv>
-	--<mod-pred>
 	-- e1*+e2 ==> e1*e2
 	elseif ispossv(p) then
 		if isempty(k) then
@@ -290,7 +284,6 @@ function pi(g, p, k)
 		else
 			return makecon(makestar(pi(g, p.p1, makeempty())), k)
 		end
-	--<mod-pred>
 	-- pi(&e1, e2) = &pi(e1,"")e2
 	elseif isand(p) then
 		if isempty(k) then
@@ -298,7 +291,6 @@ function pi(g, p, k)
 		else
 			return makecon(makeand(pi(g, p.p1, makeempty())), k)
 		end
-	--<mod-pred>
 	-- pi(!e1, e2) = !pi(e1,"")e2
 	elseif isnot(p) then
 		if isempty(k) then
@@ -313,7 +305,6 @@ function pi(g, p, k)
 	end
 end
 
---<mod-capturematch>
 function capturematch(subject, peg)
 	local indices = {}
 	local last = {}
@@ -373,12 +364,14 @@ function find(re, subject)
 end
 
 
--- imprime uma peg dada em forma de árvore
+-- print a PEG given in the form of a tree
 function ptree (p)
 	if ischar(p) then
 		return "'" .. p.v .. "'"
+	elseif isrange(p) then
+		return "range{" .. p.v1 .. "-" .. p.v2 .. "}"
 	elseif isset(p) then
-		return "set{" .. p.v1 .. "-" .. p.v2 .. "}"
+		return "set{" .. p.v .. "}"
 	elseif isempty(p) then
 		--return "''"
 		return "empty"
@@ -396,19 +389,15 @@ function ptree (p)
 	elseif isstar(p) then
 		local s = ptree(p.p1)
 		return 'star{' .. s .. '}'
-	--<mod-lazy>
 	elseif islazy(p) then
 		local s = writepeg(p.p1)
 		return 'lazy{' .. s .. '}'
-	--<mod-possv>
 	elseif ispossv(p) then
 		local s = ptree(p.p1)
 		return "possv{" .. s .. "}"
-	--<mod-pred>
 	elseif isand(p) then
 		local s = ptree(p.p1)
 		return 'and{' .. s .. '}'
-	--<mod-pred>
 	elseif isnot(p) then
 		local s = ptree(p.p1)
 		return 'not{' .. s .. '}'
@@ -418,7 +407,6 @@ function ptree (p)
 	elseif isquest(p) then
 		local s = writepeg(p.p1)
 		return 'quest{' .. s .. '}'
-	--<mod-capture>
 	elseif isopencapt(p) then
 		return 'open_' .. p.v
 	elseif isclosecapt(p) then
@@ -432,10 +420,11 @@ end
 
 function createpattern(g)
 	local p = {}
-	-- o pairs itera sobre todos os elementos da tabela
-	-- (utiliza a função next, que não garante ordem alguma)
-	-- o ipairs itera sequencialmente sobre indices inteiros,
-	-- começando em 1 até o primeiro valor nil
+	-- pairs iterates over all the elements in a table using the function "next",
+	-- which does not ensure any order on the traverse
+	--
+	-- ipairs iterates sequencially over integer indices, starting at 1 with
+	-- unitary increments until it finds the first nil value in the table
 	for k, v in pairs(g) do
 		p[k] = makepeg(v)
 	end

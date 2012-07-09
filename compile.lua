@@ -5,12 +5,12 @@ local m = require "lpeg"
 --[[
 -- sintaxe lpeg
 local lpeg = require 'lpeg'
- any = lpeg.P(1)				--> padrão que aceita um caracter
- space = lpeg.S(" \t\n")		--> conjunto com os caracteres dados
- lower = lpeg.R("az")			--> range contendo [a-z]
- upper = lpeg.R("AZ")			--> range contendo [A-Z]
- letter = lower + upper			--> '+' é escolha ordenada
- 								--> '*' denota concatenação
+ any = lpeg.P(1)				--> pattern that matches one character
+ space = lpeg.S(" \t\n")		--> set with the given characters
+ lower = lpeg.R("az")			--> range of [a-z]
+ upper = lpeg.R("AZ")			--> range of [A-Z]
+ letter = lower + upper			--> '+' denotes ordered choice
+ 								--> '*' denotes concatenation
  test = lpeg.P("casa")
  np = 1 - lpeg.S("()")
  temp = "(" * np^0 * ")"
@@ -34,26 +34,25 @@ local regrammar
 local tree
 local start = 'pattern'
 
---<mod-capture>
+-- each capture has an identifier
 local captureid;
 
 
--- valores constantes para representar o tipo de um nó
-local tag = { empty = 'empty', char = 'char', set = 'set',
-		any = 'any', con = 'con', ord = 'ord', var = 'var',
+-- constant values to represent the type of a node
+local tag = { empty = 'empty', char = 'char', range = 'range',
+		set = 'set', any = 'any', con = 'con', ord = 'ord', var = 'var',
 		star = 'star', plus = 'plus', quest = 'quest',
 		lazy = 'lazy', possv = 'possv', andp = 'andp',
 		notp = 'notp', opencapt = 'opencapt', closecapt = 'closecapt'}
-		--<mod-lazy><mod-possv><mod-pred><mod-capture>
 
 function parse(s)
-	-- regrammar é um objeto, a chamada 'regrammar:match(s)'
-	-- é o mesmo que 'regramar.match(regrammar, s)'
+	-- regrammar is an object, the call 'regrammar:match(s)' is sugar for
+	-- 'regrammar.match(regrammar, s)'
 	tree = {}
 	captureid = 0;
 	regrammar:match(s)
-	--<mod-capture>
-	-- flag para indicar se o padrao possui capturas
+
+	-- flag to indicate if the pattern has captures
 	tree[start].capture = captureid > 0
 	return tree[start]
 end
@@ -66,7 +65,7 @@ local function pattern(body)
 	tree[start] = body
 end
 
--- makev cria um nó para terminais e nao-terminais
+-- create a node in the tree for terminals and non-terminals
 function makev(k, v1, v2)
 	if not v2 then
 		return { kind=k, v=v1 }
@@ -74,9 +73,9 @@ function makev(k, v1, v2)
 	return { kind=k, v1=v1, v2=v2 }
 end
 
--- cria um novo nó com a tag k
--- p2 pode nem sempre existir, como quando k é tag.star
--- nesse caso, olhamos apenas para no.p1
+-- create a node with the tag k
+-- p2 may not exist (as when k is tag.star), in which caseA we look only at
+-- no.p1
 function makep(k, p1, p2)
 	return { kind=k, p1=p1, p2=p2 }
 end
@@ -97,8 +96,12 @@ function makeempty()
 	return makev(tag.empty, nil)
 end
 
-function makeset(v1, v2)
-	return makev(tag.set, v1, v2)
+function makerange(v1, v2)
+	return makev(tag.range, v1, v2)
+end
+
+function makeset(v)
+	return makev(tag.set, v)
 end
 
 function makenot(p1)
@@ -129,17 +132,14 @@ function makecon(p1, p2)
 	return makep(tag.con, p1, p2)
 end
 
---<mod-lazy>
 function makelazy(p1)
 	return makep(tag.lazy, p1)
 end
 
---<mod-possv>
 function makepossv(p1)
 	return makep(tag.possv, p1)
 end
 
---<mod-rept>
 -- repete exatamente n1
 function makerept1(p1, n1)
 	p = p1
@@ -149,15 +149,13 @@ function makerept1(p1, n1)
 	return p
 end
 
---<mod-rept>
 -- repete n1 ou mais
 function makerept2(p1, n1)
 	p = makerept1(p1, n1)
 	return makecon(p, makestar(p1))
 end
 
---<mod-rept>
--- repete entre n1 e n2, inclusive
+-- repetes between n1 and n2 time, inclusive
 function makerept3(p1, n1, n2)
 	p = makerept1(p1, n1);
 	s = makeord(p1, makeempty())
@@ -167,20 +165,16 @@ function makerept3(p1, n1, n2)
 	return makecon(p, s)
 end
 
---<mod-anchor>
 function makedollar()
 	return makenot(makeany())
 end
---<mod-anchor>
 function makeendline()
 	return makeord(makeand(makechar("\n")), makedollar())
 end
---<mod-anchor>
 function makelineeof()
 	return makeand(makecon(makequest(makechar("\n")), makedollar()))
 end
 
---<mod-capture>
 function makeopencapt()
 	captureid = captureid + 1
 	return makev(tag.opencapt, captureid)
@@ -192,9 +186,9 @@ function makecapture (p1)
 	return makecon(makecon(makeopencapt(), p1), makeclosecapt())
 end
 
--- start		--> string contendo 'pattern'
--- S			--> casa conjunto contendo espaços ou tabs lpeg.S(" \t")^0
--- endline		--> casa quebra de linha, lpeg.P('\n')
+-- start		--> string containing 'pattern'
+-- S			--> matches the set of spaces or tabs, lpeg.S(" \t")^0
+-- endline		--> matches end-of-line, lpeg.P("\n")
 regrammar = m.P {
 	start
 	, pattern
@@ -206,20 +200,15 @@ regrammar = m.P {
 		= (m.V("pred") * S *  m.V("con")) / makecon
 		+ m.V ("pred")
 	, pred
-		--<mod-pred>
 		= ("?!" * S * m.V("rep")) / makenot
 		+ ("?=" * S * m.V("rep")) / makeand
 		+ m.V("rep")
 	, rep
 		= (m.V("elem") * "+") / makeplus
-		--<mod-lazy>
 		+ (m.V("elem") * "*?") / makelazy
-		--<mod-possv>
 		+ (m.V("elem") * "*+") / makepossv
 		+ (m.V("elem") * "*") / makestar
-		--+ (m.V("elem") * "?") / makequest
 		+ (m.V("elem") * "?" * -m.S("!=")) / makequest
-		--<mod-rept>
 		+ (m.V("elem") * "{" * m.V("digits") * "}") / makerept1
 		+ (m.V("elem") * "{" * m.V("digits") * ",}") / makerept2
 		+ (m.V("elem") * "{" * m.V("digits") * "," * m.V("digits") * "}") / makerept3
@@ -228,21 +217,20 @@ regrammar = m.P {
 		= m.V("char") / makechar
 		+ m.V("empty") / makeempty
 		+ m.V("any") / makeany
+		+ m.V("range") / makerange
 		+ m.V("set") / makeset
-		--<mod-capture>
 		+ ('(?:' * S * m.V("ord") * S * ')')
 		+ ('(' * -m.P("?:") * S * m.V("ord") * S * ')') / makecapture
-		--<mod-anchor>
 		+ m.P("$") / makedollar
 		+ m.P("\z") / makeendline
 		+ m.P("\Z") / makelineeof
 	-- -- -- -- -- -- -- -- -- -- -- -- --
 	--, char = "'" * m.C((m.P(1) - m.P("'"))^1) * "'"
 	, char = "'" * m.C(m.P(m.P(1) - m.P("'"))^1) * "'"
-	, set = "[" * m.C(m.P(1)) * '-' * m.C(m.P(1)) * "]"
+	, range = "[" * m.C(m.P(1)) * '-' * m.C(m.P(1)) * "]"
+	, set = "[" * m.C(m.P(m.P(1) - m.P("]"))^1) * "]"
 	, any = lpeg.P(".")
 	, empty = m.P"'" * m.P"'"
-	--<mod-rept>
 	, digit = m.C(m.R("09"))
 	, digits = m.C(m.R("09")^1)
 }
