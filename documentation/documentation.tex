@@ -1,0 +1,136 @@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% RegexLib Documentation
+\documentclass[12pt]{article}
+
+% directory for the files to be included
+\newcommand{\filesdir}{tex-files}
+% name of the library
+\newcommand{\libname}{RePeg}
+% font style for regular expressions
+\newcommand{\markpat}[1] {\texttt{#1}}
+
+
+\title{\libname}
+\author{Edman Paes Anjos \and Sérgio Queiroz de Medeiros}
+
+\begin{document}
+
+% title and initial page
+\maketitle
+%A pattern matching tool that evaluates regular expressions using Parsing Expression Grammars (PEGs)
+A pattern matching tool that translates regular expressions to identical Parsing
+Expression Grammars (PEGs). We implement the regular expression's semantics
+using PEGs.
+, so that the user doe.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Introduction
+\section{The \libname{} Library}
+\label{sec:introduction}
+
+\libname{} is a library for pattern matching in the Lua programming language.
+It uses most of the traditional and well-known PCRL syntax of regular
+expressions, therefore it does not requires the user any new knowledge,
+providing a familiar environment. In this text you can find a reference manual
+for the library.
+
+%The following table describes the syntax recognized by \libname{} for regular
+The table \ref{tab:syntax} describes the syntax recognized by \libname{} for regular
+expressions. Here the \markpat{a} or \markpat{b} represent a single character;
+\markpat{s} represents a string of characters; \markpat{p} represents a pattern;
+\markpat{num} represents a number (\verb=[0-9]+=).
+
+\begin{table}[!h]
+	\label{tab:syntax}
+	\centering
+	\begin{tabular}{|l|l|}
+		\hline
+		\textbf{Syntax}					&		\textbf{Description} \\
+		\hline
+
+		% grouping and capture
+		\markpat{(?: p )}				&		grouping \\
+		\markpat{( p )}					&		capture \\
+		% terminal definitions
+		\markpat{.}						&		any character \\
+		\markpat{`'}					&		empty string \\
+		\markpat{`s'}					&		literal string \\
+		\markpat{\$}					&		end of input \\
+		\textbackslash\markpat{z}		&		end of line or end of input \\
+		\textbackslash\markpat{Z}		&		end of input preceded or not by
+			end of line\\
+		\markpat{[a-b]}					&		character range \\
+		% choice and concatenation
+		\markpat{p1 / p2}				&		choice \\
+		\markpat{p1 p2}					&		concatenation \\
+		% predicates
+		\markpat{?= p}					&		and predicate \\
+		\markpat{?!~ p}					&		not predicate \\
+		% repetitions
+		\markpat{p ?}					&		optional match \\
+		\markpat{p *}					&		zero or more repetitions \\
+		\markpat{p +}					&		one or more repetitions \\
+		\markpat{p *+}					&		possessive repetition \\
+		\markpat{p *?}					&		lazy repetition \\
+		\markpat{p \{ num \}}			&		exactly \markpat{num} repetitions \\
+		\markpat{p \{ num , \}}			&		\markpat{num} repetitions or more \\
+		\markpat{p \{ num1 , num2 \}}	&		between \markpat{num1} and
+			\markpat{num2} repetitions, inclusive \\
+
+		\hline
+	\end{tabular}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Functions
+\section{Functions}
+\label{sec:functions}
+
+%%% Function match
+\subsection{\markpat{\libname{}.match (pattern, subject)}}
+\markpat{pattern} $\rightarrow$ a string describing a regular expression
+\\ \markpat{subject} $\rightarrow$ the string of characters to be matched
+against the \markpat{pattern}
+
+% match description
+Matches directly a \markpat{pattern} to a string, returning the portion of the
+\markpat{subject} succesfully matched.
+
+
+%%% Function find
+\subsection{\markpat{\libname{}.find (pattern, subject)}}
+\markpat{pattern} $\rightarrow$ a string describing a regular expression
+\\ \markpat{subject} $\rightarrow$ the string of characters to be matched
+against the \markpat{pattern}
+
+% find description
+Seeks for the first substring of the \markpat{subject} that can be matched by
+the given \markpat{pattern}. If it matches more than one substring, return the
+largest.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Usage Examples
+\section{Usage Examples}
+\label{sec:examples}
+
+%%% A simple program
+\subsection{A simple program}
+The following code specifies a running Lua program. In this case, both calls for
+\markpat{find} and \markpat{match} yeld the same result and could be used
+interchangeably.
+
+\begin{verbatim}
+repeg = require 'repeg'
+
+-- find the first number in a string
+string = "this string has 29 characters"
+print(repeg.find("[0-9]+", string)) --> {28}
+print(repeg.match(".*? ([0-9]+)", string)); --> {28}
+\end{verbatim}
+
+
+%%%
+
+\end{document}
+

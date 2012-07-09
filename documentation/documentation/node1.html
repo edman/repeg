@@ -1,0 +1,175 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+
+<!--Converted with LaTeX2HTML 2008 (1.71)
+original version by:  Nikos Drakos, CBLU, University of Leeds
+* revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
+* with significant contributions from:
+  Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
+<HTML>
+<HEAD>
+<TITLE>The RePeg Library</TITLE>
+<META NAME="description" CONTENT="The RePeg Library">
+<META NAME="keywords" CONTENT="documentation">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="distribution" CONTENT="global">
+
+<META NAME="Generator" CONTENT="LaTeX2HTML v2008">
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+
+<LINK REL="STYLESHEET" HREF="documentation.css">
+
+<LINK REL="next" HREF="node2.html">
+<LINK REL="previous" HREF="documentation.html">
+<LINK REL="up" HREF="documentation.html">
+<LINK REL="next" HREF="node2.html">
+</HEAD>
+
+<BODY >
+<!--Navigation Panel-->
+<A NAME="tex2html19"
+  HREF="node2.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
+ SRC="file:/usr/lib/latex2html/icons/next.png"></A> 
+<A NAME="tex2html17"
+  HREF="documentation.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
+ SRC="file:/usr/lib/latex2html/icons/up.png"></A> 
+<A NAME="tex2html11"
+  HREF="documentation.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
+ SRC="file:/usr/lib/latex2html/icons/prev.png"></A>   
+<BR>
+<B> Next:</B> <A NAME="tex2html20"
+  HREF="node2.html">Functions</A>
+<B> Up:</B> <A NAME="tex2html18"
+  HREF="documentation.html">RePeg</A>
+<B> Previous:</B> <A NAME="tex2html12"
+  HREF="documentation.html">RePeg</A>
+<BR>
+<BR>
+<!--End of Navigation Panel-->
+
+<H1><A NAME="SECTION00010000000000000000"></A>
+<A NAME="sec:introduction"></A>
+<BR>
+The RePeg Library
+</H1>
+
+<P>
+RePeg is a library for pattern matching in the Lua programming language.
+It uses most of the traditional and well-known PCRL syntax of regular
+expressions, therefore it does not requires the user any new knowledge,
+providing a familiar environment. In this text you can find a reference manual
+for the library.
+
+<P>
+The table <A HREF="#tab:syntax">1</A> describes the syntax recognized by RePeg for regular
+expressions. Here the <TT>a</TT> or <TT>b</TT> represent a single character;
+<TT>s</TT> represents a string of characters; <TT>p</TT> represents a pattern;
+<TT>num</TT> represents a number (<code>[0-9]+</code>).
+
+<P>
+<BR><P></P>
+<DIV ALIGN="CENTER">
+	<A NAME="tab:syntax"></A>	<DIV ALIGN="CENTER">	<TABLE CELLPADDING=3 BORDER="1">
+<TR><TH ALIGN="LEFT"><B>Syntax</B></TH>
+<TH ALIGN="LEFT"><B>Description</B></TH>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>(?: p )</TT></TD>
+<TD ALIGN="LEFT">grouping</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>( p )</TT></TD>
+<TD ALIGN="LEFT">capture</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>.</TT></TD>
+<TD ALIGN="LEFT">any character</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>`'</TT></TD>
+<TD ALIGN="LEFT">empty string</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>`s'</TT></TD>
+<TD ALIGN="LEFT">literal string</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>$</TT></TD>
+<TD ALIGN="LEFT">end of input</TD>
+</TR>
+<TR><TD ALIGN="LEFT">&#92;<TT>z</TT></TD>
+<TD ALIGN="LEFT">end of line or end of input</TD>
+</TR>
+<TR><TD ALIGN="LEFT">&#92;<TT>Z</TT></TD>
+<TD ALIGN="LEFT">end of input preceded or not by
+			end of line</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>[a-b]</TT></TD>
+<TD ALIGN="LEFT">character range</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>p1 / p2</TT></TD>
+<TD ALIGN="LEFT">choice</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>p1 p2</TT></TD>
+<TD ALIGN="LEFT">concatenation</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>?= p</TT></TD>
+<TD ALIGN="LEFT">and predicate</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>?!&nbsp; p</TT></TD>
+<TD ALIGN="LEFT">not predicate</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>p ?</TT></TD>
+<TD ALIGN="LEFT">optional match</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>p *</TT></TD>
+<TD ALIGN="LEFT">zero or more repetitions</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>p +</TT></TD>
+<TD ALIGN="LEFT">one or more repetitions</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>p *+</TT></TD>
+<TD ALIGN="LEFT">possessive repetition</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>p *?</TT></TD>
+<TD ALIGN="LEFT">lazy repetition</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>p { num }</TT></TD>
+<TD ALIGN="LEFT">exactly <TT>num</TT> repetitions</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>p { num , }</TT></TD>
+<TD ALIGN="LEFT"><TT>num</TT> repetitions or more</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT>p { num1 , num2 }</TT></TD>
+<TD ALIGN="LEFT">between <TT>num1</TT> and
+			<TT>num2</TT> repetitions, inclusive</TD>
+</TR>
+</TABLE></DIV>
+</DIV>
+<BR>
+
+<P>
+<HR>
+<!--Navigation Panel-->
+<A NAME="tex2html19"
+  HREF="node2.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
+ SRC="file:/usr/lib/latex2html/icons/next.png"></A> 
+<A NAME="tex2html17"
+  HREF="documentation.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
+ SRC="file:/usr/lib/latex2html/icons/up.png"></A> 
+<A NAME="tex2html11"
+  HREF="documentation.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
+ SRC="file:/usr/lib/latex2html/icons/prev.png"></A>   
+<BR>
+<B> Next:</B> <A NAME="tex2html20"
+  HREF="node2.html">Functions</A>
+<B> Up:</B> <A NAME="tex2html18"
+  HREF="documentation.html">RePeg</A>
+<B> Previous:</B> <A NAME="tex2html12"
+  HREF="documentation.html">RePeg</A>
+<!--End of Navigation Panel-->
+<ADDRESS>
+
+2012-07-08
+</ADDRESS>
+</BODY>
+</HTML>
