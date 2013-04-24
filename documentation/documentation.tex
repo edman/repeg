@@ -1,7 +1,9 @@
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%\%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% RegexLib Documentation
 \documentclass[12pt]{article}
+
+\usepackage[latin1]{inputenc}
 
 % directory for the files to be included
 \newcommand{\filesdir}{tex-files}
@@ -19,10 +21,18 @@
 % title and initial page
 \maketitle
 %A pattern matching tool that evaluates regular expressions using Parsing Expression Grammars (PEGs)
-A pattern matching tool that translates regular expressions to identical Parsing
-Expression Grammars (PEGs). We implement the regular expression's semantics
-using PEGs.
-, so that the user doe.
+A pattern matching tool that evaluates regular expressions to equivalent
+Parsing Expression Grammars (PEGs) that match the same strings.We implement the
+regular expression's semantics using PEGs in a way that saves the user from
+learning the PEG syntax, the only knowledge needed is about regular expressions.
+
+
+A pattern matching tool that evaluate regular expressions by converting them
+to equivalent Parsing Expression Grammars (PEGs).
+The regular expression's semantics is implemented in a way that saves you from
+learning any new PEG syntax. That is, writing regular expressions is all you need
+to know to start using \libname.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Introduction
@@ -30,18 +40,19 @@ using PEGs.
 \label{sec:introduction}
 
 \libname{} is a library for pattern matching in the Lua programming language.
-It uses most of the traditional and well-known PCRL syntax of regular
-expressions, therefore it does not requires the user any new knowledge,
-providing a familiar environment. In this text you can find a reference manual
-for the library.
+It uses most of the traditional and well-known PCRL syntax for regular
+expressions, therefore it does not incur the acquisition of any new
+knowledge by providing a familiar environment. In this text you can find a
+reference manual for the library, including its methods and some examples.
 
 %The following table describes the syntax recognized by \libname{} for regular
-The table \ref{tab:syntax} describes the syntax recognized by \libname{} for regular
+The table \ref{tab:syntax} describes the syntax \libname{} utilizes for regular
 expressions. Here the \markpat{a} or \markpat{b} represent a single character;
 \markpat{s} represents a string of characters; \markpat{p} represents a pattern;
-\markpat{num} represents a number (\verb=[0-9]+=).
+and \markpat{num} represents a number (\verb=[0-9]+=).
 
 \begin{table}[!h]
+	\caption{Regular expression syntax recognized by \libname{}}
 	\label{tab:syntax}
 	\centering
 	\begin{tabular}{|l|l|}
@@ -54,8 +65,8 @@ expressions. Here the \markpat{a} or \markpat{b} represent a single character;
 		\markpat{( p )}					&		capture \\
 		% terminal definitions
 		\markpat{.}						&		any character \\
-		\markpat{`'}					&		empty string \\
-		\markpat{`s'}					&		literal string \\
+		\markpat{`'}					&		empty string \\ %TODO make the text output ''
+		\markpat{`s'}					&		literal string \\ %TODO same as above
 		\markpat{\$}					&		end of input \\
 		\textbackslash\markpat{z}		&		end of line or end of input \\
 		\textbackslash\markpat{Z}		&		end of input preceded or not by
@@ -65,8 +76,8 @@ expressions. Here the \markpat{a} or \markpat{b} represent a single character;
 		\markpat{p1 / p2}				&		choice \\
 		\markpat{p1 p2}					&		concatenation \\
 		% predicates
-		\markpat{?= p}					&		and predicate \\
-		\markpat{?!~ p}					&		not predicate \\
+		\markpat{?= p}					&		\markpat{and} predicate \\
+		\markpat{?!~ p}					&		\markpat{not} predicate \\
 		% repetitions
 		\markpat{p ?}					&		optional match \\
 		\markpat{p *}					&		zero or more repetitions \\
@@ -94,8 +105,8 @@ expressions. Here the \markpat{a} or \markpat{b} represent a single character;
 against the \markpat{pattern}
 
 % match description
-Matches directly a \markpat{pattern} to a string, returning the portion of the
-\markpat{subject} succesfully matched.
+Matches directly a \markpat{pattern} to a string, returning the length of
+the portion of the \markpat{subject} succesfully matched.
 
 
 %%% Function find
@@ -121,12 +132,23 @@ The following code specifies a running Lua program. In this case, both calls for
 interchangeably.
 
 \begin{verbatim}
-repeg = require 'repeg'
+RePeg = require 'RePeg'
 
 -- find the first number in a string
 string = "this string has 29 characters"
-print(repeg.find("[0-9]+", string)) --> {28}
-print(repeg.match(".*? ([0-9]+)", string)); --> {28}
+print(RePeg.find("[0-9]+", string)) --> {29}
+print(RePeg.match(".*? ([0-9]+)", string)); --> {29}
+\end{verbatim}
+
+%%% Matching an image name in html files
+\subsection{Matching an image name in html files}
+This example matches an image name in html files.
+
+\begin{verbatim}
+RePeg = require 'RePeg'
+
+string = [[<html><head>This is an html file</head><body><img src="image_name"></body></html>]]
+print(RePeg.find([[<img src=".*"]], string)) -->
 \end{verbatim}
 
 

@@ -7,66 +7,66 @@ original version by:  Nikos Drakos, CBLU, University of Leeds
   Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
 <HTML>
 <HEAD>
-<TITLE>About this document ...</TITLE>
-<META NAME="description" CONTENT="About this document ...">
+<TITLE>Matching an image name in html files</TITLE>
+<META NAME="description" CONTENT="Matching an image name in html files">
 <META NAME="keywords" CONTENT="documentation">
 <META NAME="resource-type" CONTENT="document">
 <META NAME="distribution" CONTENT="global">
 
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
 <META NAME="Generator" CONTENT="LaTeX2HTML v2008">
 <META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
 
 <LINK REL="STYLESHEET" HREF="documentation.css">
 
-<LINK REL="previous" HREF="node5.html">
-<LINK REL="up" HREF="documentation.html">
+<LINK REL="previous" HREF="node6.html">
+<LINK REL="up" HREF="node5.html">
+<LINK REL="next" HREF="node8.html">
 </HEAD>
 
 <BODY >
 <!--Navigation Panel-->
+<A NAME="tex2html81"
+  HREF="node8.html">
 <IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
- SRC="file:/usr/lib/latex2html/icons/next_g.png"> 
-<A NAME="tex2html74"
-  HREF="documentation.html">
+ SRC="file:/usr/lib/latex2html/icons/next.png"></A> 
+<A NAME="tex2html79"
+  HREF="node5.html">
 <IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
  SRC="file:/usr/lib/latex2html/icons/up.png"></A> 
-<A NAME="tex2html70"
+<A NAME="tex2html75"
   HREF="node6.html">
 <IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
  SRC="file:/usr/lib/latex2html/icons/prev.png"></A>   
 <BR>
-<B> Up:</B> <A NAME="tex2html75"
-  HREF="documentation.html">RePeg</A>
-<B> Previous:</B> <A NAME="tex2html71"
+<B> Next:</B> <A NAME="tex2html82"
+  HREF="node8.html">About this document ...</A>
+<B> Up:</B> <A NAME="tex2html80"
+  HREF="node5.html">Usage Examples</A>
+<B> Previous:</B> <A NAME="tex2html76"
   HREF="node6.html">A simple program</A>
 <BR>
 <BR>
 <!--End of Navigation Panel-->
 
-<H1><A NAME="SECTION00040000000000000000">
-About this document ...</A>
-</H1>
- <STRONG>RePeg</STRONG><P>
-This document was generated using the
-<A HREF="http://www.latex2html.org/"><STRONG>LaTeX</STRONG>2<tt>HTML</tt></A> translator Version 2008 (1.71)
+<H2><A NAME="SECTION00032000000000000000">
+Matching an image name in html files</A>
+</H2>
+This example matches an image name in html files.
+
 <P>
-Copyright &#169; 1993, 1994, 1995, 1996,
-<A HREF="http://cbl.leeds.ac.uk/nikos/personal.html">Nikos Drakos</A>, 
-Computer Based Learning Unit, University of Leeds.
-<BR>
-Copyright &#169; 1997, 1998, 1999,
-<A HREF="http://www.maths.mq.edu.au/~ross/">Ross Moore</A>, 
-Mathematics Department, Macquarie University, Sydney.
+<PRE>
+RePeg = require 'RePeg'
+
+string = [[&lt;html&gt;&lt;head&gt;This is an html file&lt;/head&gt;&lt;body&gt;&lt;img src="image_name"&gt;&lt;/body&gt;&lt;/html&gt;]]
+print(RePeg.find([[&lt;img src=".*"]], string)) --&gt;
+</PRE>
+
 <P>
-The command line arguments were: <BR>
- <STRONG>latex2html</STRONG> <TT><A NAME="tex2html1"
-  HREF="../documentation.tex">documentation.tex</A></TT>
-<P>
-The translation was initiated by  on 2012-07-08
 <BR><HR>
 <ADDRESS>
 
-2012-07-08
+2012-07-26
 </ADDRESS>
 </BODY>
 </HTML>
