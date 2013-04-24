@@ -219,7 +219,7 @@ function makepeg (p)
 		return lpeg.Cc('open', p.v) * lpeg.Cp()
 	elseif isclosecapt(p) then
 		return lpeg.Cc('close') * lpeg.Cp()
-	-- when this function is called, all the tags refer to then
+	-- when this function is called, all the tags refer to the
 	-- PEG syntax
 	else
 		error("Unknown kind: " .. p.kind)
@@ -330,7 +330,8 @@ function capturematch(subject, peg)
 	end
 
 	for key in pairs(indices) do
-		indices[key] = subject:sub(indices[key].ini, indices[key].fim)
+		--indices[key] = subject:sub(indices[key].ini, indices[key].fim)
+		indices[key] = {indices[key].ini, indices[key].fim}
 	end
 	return indices
 end
@@ -349,14 +350,14 @@ function match(re, subject)
 	printpeg(g)
 	local peg = createpattern(g)
 
-	-- "retree.capture" is set to true when the pattern has captures
+	-- "retree.capture" is set to true  in compile.lua when the pattern has captures
 	if retree.capture then
 		return capturematch(subject, peg)
 	end
 	return peg:match(subject)
 end
 
--- search the subject for the first substring  
+-- search the subject for the first substring that matches the expression
 function find(re, subject)
 	--re = '.* (?: ' .. re .. ' )'
 	re = '.*? ( ' .. re .. ' )'
