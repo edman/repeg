@@ -67,6 +67,7 @@ end
 
 -- create a node in the tree for terminals and non-terminals
 function makev(k, v1, v2)
+    printdebug('makev', k, v1, v2)
 	if not v2 then
 		return { kind=k, v=v1 }
 	end
@@ -97,11 +98,17 @@ function makeempty()
 end
 
 function makerange(v1, v2)
+    printdebug('makerange', tag.range, v1, v2)
 	return makev(tag.range, v1, v2)
 end
 
 function makeset(v)
+    printdebug('makeset', v)
 	return makev(tag.set, v)
+end
+
+function printdebug(name, v1, v2)
+    --print(name, v1, v2)
 end
 
 function makenot(p1)
@@ -125,10 +132,12 @@ function makequest(p1)
 end
 
 function makeord(p1, p2)
+    printdebug('makeord', p1.v, p2.v)
 	return makep(tag.ord, p1, p2)
 end
 
 function makecon(p1, p2)
+    printdebug('makecon', p1, p2)
 	return makep(tag.con, p1, p2)
 end
 
@@ -186,8 +195,8 @@ function makecapture (p1)
 	return makecon(makecon(makeopencapt(), p1), makeclosecapt())
 end
 
--- start		--> string containing 'pattern'
--- S			--> matches the set of spaces or tabs, lpeg.S(" \t")^0
+-- start		--> string containing 'pattern', the name of the initial rule
+-- S			--> matches the set of zero or more spaces and tabs, lpeg.S(" \t")^0
 -- endline		--> matches end-of-line, lpeg.P("\n")
 regrammar = m.P {
 	start
@@ -227,9 +236,10 @@ regrammar = m.P {
 	-- -- -- -- -- -- -- -- -- -- -- -- --
 	--, char = "'" * m.C((m.P(1) - m.P("'"))^1) * "'"
 	, char = "'" * m.C(m.P(m.P(1) - m.P("'"))^1) * "'"
-	, range = "[" * m.C(m.P(1)) * '-' * m.C(m.P(1)) * "]"
+	, range = "[" * m.C(m.P(1)) * '-' * m.C(m.P(1)) * m.C(m.P(1) - m.P("]"))^0 * "]"
+	--, range = "[" * m.C(m.P(1)) * '-' * m.C(m.P(1)) * "]" -- previous rule
 	, set = "[" * m.C(m.P(m.P(1) - m.P("]"))^1) * "]"
-	, any = lpeg.P(".")
+	, any = m.P(".")
 	, empty = m.P"'" * m.P"'"
 	, digit = m.C(m.R("09"))
 	, digits = m.C(m.R("09")^1)
