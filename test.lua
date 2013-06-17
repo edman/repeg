@@ -21,57 +21,42 @@ function getkeys(t)
 	return index
 end
 
--- return true if the table "gotten" contains the same
--- elements in the same order as "result"
-function correctresult(result, gotten)
-	if #result ~= tablesize(gotten) then
-		return false
-	end
-
-	-- "i" is the index for the table 'result'
-	-- "key" is the index for the table 'gotten'
-	i = 1
-	for _, key in ipairs(getkeys(gotten)) do
-		if result[i] ~= gotten[key] then
-			return false
-		end
-		i = i + 1
-	end
-	return true
+-- return true if the table "gotten" contains the same elements
+-- in the same order as the table "expected"
+function correctresult(expected, gotten)
+    return writetable(expected) == writetable(gotten)
 end
 
 -- returns the table concatenating its elements in a string
 function writetable(t)
-	if tablesize(t) == 0 then
-		return "{}"
-	end
+    if type(t) ~= 'table' then
+        if t == '' then
+            return "''"
+        end
+        return '' .. t
+    end
 
-	local s = ""
+	local s = "{"
 	local first = true
 	for _, key in ipairs(getkeys(t)) do
-		if first then
-			if t[key] == '' then
-				s = "{''"
-			else
-				s = "{" .. t[key]
-			end
-		else
-			if t[key] == '' then
-				s = s .. ", ''"
-			else
-				s = s .. ", " .. t[key]
-			end
-		end
+        local toadd = writetable(t[key])
+
+        if not first then
+            toadd = ', ' .. toadd
+        end
+
+        s = s .. toadd
 		first = false
 	end
 
 	return s .. "}"
 end
 
--- imprime mensagem de erro 
-function errormessage(input, expected, got)
-	return ("For input " .. input .. " the expected result was " .. expected .. " but we got " .. got)
+-- prints error message
+function errormessage(input, expected, gotten)
+	return ("For input " .. input .. " the expected result was " .. expected .. " but we got " .. gotten)
 end
+
 
 local t = {}
 function pattern(e) 
@@ -86,14 +71,23 @@ if f then f() else error (e) end
 
 -- for every regex in table t
 for _, v in ipairs(t) do
+	-- the function we are going to test, match or find
+	local isfind = v.find
+
 	-- let's try to match several inputs
 	for _, vin in ipairs (v.input) do
 		local s = vin[1]  -- the subject 
 		local res = vin[2]  -- the expected result
-		local n = regex.match(v.p, s) -- the result of the match
+		local n = true -- the result of the match
 		local erro = false
 
-		-- se o match retornar nil, atribui 0 ou {}
+		if isfind then
+			n = regex.find(v.p, s)
+		else
+			n = regex.match(v.p, s)
+		end
+
+        -- if the match returns nil, assign 0 or {} to n
 		if n == nil then
 			if type(res) == 'number' then
 				n = 0
@@ -102,11 +96,10 @@ for _, v in ipairs(t) do
 			end
 		end
 
-		-- comparacao dos resultados esperado e obtido
+        -- compare the expected result with what we got from regex.match()
 		if (type(res) == 'table') then
-			--erro = not comparetables(res, n)
 			erro = not correctresult(res, n)
-			-- transforma res e n em uma string para a mensagem de erro
+            -- get the string representation of res and n
 			res = writetable(res)
 			n = writetable(n)
 		elseif (type(res) == 'number') and (res ~= n) then
@@ -119,4 +112,5 @@ for _, v in ipairs(t) do
 	end
 	print("")
 end
+
 
