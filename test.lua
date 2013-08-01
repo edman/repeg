@@ -1,12 +1,9 @@
 require 'regex'
 
--- TODO find a better way of getting the size of a table
 -- return the size of a table
 function tablesize(t)
 	local size = 0;
-	for k in pairs(t) do
-		size = size + 1;
-	end
+	for _ in pairs(t) do size = size + 1; end
 	return size;
 end
 
@@ -27,15 +24,15 @@ function correctresult(expected, gotten)
     return writetable(expected) == writetable(gotten)
 end
 
--- returns the table concatenating its elements in a string
+-- recursively parse a table into a string format
 function writetable(t)
+	-- if t is a literal, just print it
     if type(t) ~= 'table' then
-        if t == '' then
-            return "''"
-        end
+        if t == '' then return "''" end
         return '' .. t
     end
 
+	-- otherwise, t is a table
 	local s = "{"
 	local first = true
 	for _, key in ipairs(getkeys(t)) do
@@ -112,5 +109,4 @@ for _, v in ipairs(t) do
 	end
 	print("")
 end
-
 
