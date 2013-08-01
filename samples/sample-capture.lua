@@ -5,9 +5,10 @@ pattern {
 }
 pattern {
 	p = "( 'a' (?: 'b' 'd' / 'c' / '' ) ) 'd'",
-	input = { {"ad", {"a"}}, {"abdd", {"abd"}}, {"acd", {"ac"}} }
+	input = { {"ad", {{1, 1}}}, {"abdd", {{1, 3}}}, {"acd", {{1, 2}}} }
 }
 
+--[[
 pattern {
 	p = "( 'a' ('b' 'd' / 'c' / '' ) ) 'd'",
 	input = { {"ad", {"", "a"}}, {"abdd", {"bd", "abd"}}, {"acd", {"c", "ac"}} }
@@ -68,5 +69,6 @@ pattern {
 	p = "(?: ([0-9]) / [a-z] )*",
 	input = { {"123abc456", {6} } } 
 }
+--]]
 
 
