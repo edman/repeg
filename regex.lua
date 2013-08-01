@@ -342,34 +342,314 @@ function capturematch(subject, peg)
 	return indices
 end
 
--- re	--> regular expression described in a string
--- s	--> subject to be mathed by "re"
-function match(re, subject)
-	varnumber = 0; casas = 10; zeros = "0000";
-	local g = {}
-	local retree = compile.parse(re)
-	g[init] = pi(g, retree, makeempty())
+function initialize_globals()
+	varnumber = 0
+	casas = 10
+	zeros = "0000"
+end
+
+-- print general information about the input
+function print_info(retree, g, subject)
 	print("Regex: ", writepeg(retree))
 	print("Input: ", subject)
-	print("Arvore: " .. ptree(retree)) -----------------------
+	print("Arvore: " .. ptree(retree))
 	print("PEG")
 	printpeg(g)
+end
+
+function peg_from_retree(retree)
+	local g = {}
+	g[init] = pi(g, retree, makeempty())
+	return g
+end
+
+-- matches the peg pattern to the given subject taking care of captures
+function handle_matching(peg, subject, has_captures)
+	local result
+	-- retree.capture is set to true in compile.lua when the pattern has captures
+	if has_captures then
+		result = capturematch(subject, peg)
+	else
+		result = peg:match(subject)
+	end
+	return result
+end
+
+-- re --> regular expression described in a string
+-- subject --> subject to be mathed by "re"
+-- optimization_function --> a function to optmize the generated PEG
+function match(re, subject, optimization_function)
+	initialize_globals()
+
+	local retree = compile.parse(re)
+	local has_captures = retree.capture
+
+	local g = peg_from_retree(retree)
+
+	-- print general debug information
+	print_info(retree, g, subject)
+
 	local peg = createpattern(g)
 
-	-- "retree.capture" is set to true  in compile.lua when the pattern has captures
-	if retree.capture then
-		return capturematch(subject, peg)
+	--------------------------------------------------------
+	-- Here is the place I must call the optimization routine. After we have
+	-- the PEG's syntatic tree and before the actual PEG pattern is created
+	
+	-- if an optmization function was given, apply it to g and peg now
+	if optimization_function then
+		peg = optimization_function(g, peg)
 	end
-	return peg:match(subject)
+	--------------------------------------------------------
+
+	local result = handle_matching(peg, subject, has_captures)
+	return result
 end
 
 -- search the subject for the first substring that matches the expression
-function find(re, subject)
+function find_normal(re, subject)
 	--re = '.* (?: ' .. re .. ' )'
 	re = '.*? ( ' .. re .. ' )'
 	return match(re, subject)
 end
 
+-- optmized version of find
+function find(re, subject)
+	-- insert a capture around the entire argument re
+	re = '(' .. re .. ')'
+	-- pass the search optimization routine to match
+	return match(re, subject, search_optimization)
+	--return find_normal(re, subject)
+end
+
+-- modify the table g, adding a new starting rule to optmize search
+-- g => table that represents the PEG
+-- peg => the pattern represented by g
+function search_optimization(g, peg)
+	-- get the pattern that represents the first set
+	local fpeg = eval_first(g)
+
+	local optmized_peg = lpeg.P {
+		"S"
+		, S = (-fpeg * lpeg.P(1))^0 * (peg + lpeg.P(1) * lpeg.V('S'))
+	}
+
+	return optmized_peg
+end
+
+-- evaluates the FIRST set of g, returning a regex string that describes it
+function eval_first(g)
+	local pegtree = g[init]
+
+	-- get the syntactic tree to describe the FIRST set
+	local ftree = first_tree(pegtree, g)
+	print('Arvore FIRST: ' .. ptree(ftree))
+
+	-- get the lpeg pattern to match the FIRST set
+	local fpeg = first(ftree)
+	if fpeg.any then
+		fpeg = lpeg.P(1)
+	else
+		fpeg = fpeg.peg
+	end
+
+	return fpeg
+end
+
+-- returns a syntactic tree that represents the first set of pegtree from the
+-- grammar described in g
+function first_tree(pegtree, g)
+	if isterm(pegtree) then
+		return pegtree
+	elseif isempty(pegtree) then -- consider merging this with the previous
+		return pegtree
+	elseif isord(pegtree) then
+		local f1 = first_tree(pegtree.p1, g)
+		local f2 = first_tree(pegtree.p2, g)
+
+		return makeord(f1, f2)
+	elseif iscon(pegtree) then
+    	local f1 = first_tree(pegtree.p1, g)
+    	if utils.contains_empty(f1) then
+    		local f2 = first_tree(pegtree.p2, g)
+    		return makecon(f1, f2)
+		end
+		return f1
+	elseif isstar(pegtree) then
+		local f1 = first_tree(pegtree, g)
+		return makestar(f1)
+	elseif islazy(pegtree) then
+		local f1 = first_tree(pegtree, g)
+		return makelazy(f1)
+	elseif ispossv(pegtree) then
+		local f1 = first_tree(pegtree, g)
+		return makepossv(f1)
+   	elseif isand(pegtree) then
+   		-- to be discussed
+		local f1 = first_tree(pegtree.p1, g)
+		return makeand(f1)
+   	elseif isnot(pegtree) then
+   		-- to be discussed
+		local f1 = first_tree(pegtree.p1, g)
+		return makenot(f1)
+    elseif isplus(pegtree) then
+    	return first_tree(pegtree, g)
+    elseif isquest(pegtree) then
+		local f1 = first_tree(pegtree.p1, g)
+		return makequest(f1)
+	elseif isvar(pegtree) then
+		pegtree = g[pegtree.v]
+		return first_tree(pegtree, g)
+    end
+end
+
+-- returns an lpeg pattern that matches the first set described in ftree
+function first(ftree)
+	-- table that will hold the resulting first set
+	local tb = {peg = lpeg.S(''), any = false, empty = false}
+	--local tb = {set = '', any = false, empty = false}
+
+	if ischar(ftree) then
+		local char = ftree.v:sub(1,1)  -- gets only the first character
+		tb.peg = lpeg.S(char)
+		return tb
+	elseif isset(ftree) then
+    	tb.peg = lpeg.S(ftree.v)
+    	return tb
+	elseif isrange(ftree) then
+		local range = ftree.v1 .. ftree.v2
+		tb.peg = lpeg.R(range)
+		return tb
+    elseif isempty(ftree) then
+    	tb.empty = true
+        return tb
+    elseif isany(ftree) then
+    	-- QUESTION: thoughts on using lpeg.P(1) here
+    	-- pattern that matches one character
+    	tb.peg = lpeg.P(1)
+    	tb.any = true
+        return tb
+    elseif isord(ftree) then
+    	local tb1 = first(ftree.p1)
+    	local tb2 = first(ftree.p2)
+
+		-- lpeg's ordered choice operator (+) is equivalent to set union if
+		-- both operands are character sets
+    	tb.peg = tb1.peg + tb2.peg
+    	tb.empty = tb1.empty or tb2.empty
+    	tb.any = tb1.any or tb2.any
+        return tb
+    -- special case for the not predicate
+	elseif iscon(ftree) and isnot(ftree.p1) then
+		local tb1 = first(ftree.p1)
+		local tb2 = first(ftree.p2)
+
+		-- pattern that does not match tb1 and then matches tb2
+		tb.peg = tb2.peg - tb1.peg
+		tb.empty = tb2.empty and not tb1.empty
+		tb.any = tb2.any and not tb1.any
+		return tb
+    elseif iscon(ftree) then
+    	tb = first(ftree.p1)
+    	if tb.empty then
+    		local tb2 = first(ftree.p2)
+    		-- again, ordered choice is equivalent to set union
+    		tb.peg = tb.peg + tb2.peg
+    		tb.empty = tb2.empty
+    		tb.any = tb.any or tb2.any
+		end
+		return tb
+	elseif isstar(ftree) or islazy(ftree) or ispossv(ftree) then
+		tb = first(ftree.p1)
+		tb.empty = true
+		return tb
+	elseif isand(ftree) then
+		-- to be discussed
+		tb = first(ftree.p1)
+		return tb
+   	elseif isnot(ftree) then
+   		-- QUESTION: will the fact that ftree.p1 has empty or any affect this?
+   		local tb1 = first(ftree.p1)
+		tb.peg = lpeg.P(1) - tb1.peg
+   		return tb
+    elseif isplus(ftree) then
+    	tb = first(ftree.p1)
+    	return tb
+    elseif isquest(ftree) then
+    	tb = first(ftree.p1)
+    	tb.empty = true
+    	return tb
+    elseif isopencapt(ftree) or isclosecapt(ftree) then
+    	tb.empty = true
+    	return tb
+    end
+end
+
+-- return a table representing the first of a regex's parse tree
+-- TODO: delete this method
+function first_old(pegtree, g)
+	-- table that will hold the resulting first set
+	local tb = {set = '', any = false, empty = false}
+
+	if ischar(pegtree) then
+		tb.set = pegtree.v:sub(1,1)  -- gets only the first character
+		return tb
+	elseif isset(pegtree) then
+    	tb.set = pegtree.v
+    	return tb
+	elseif isrange(pegtree) then
+		tb.set = utils.expand_range(pegtree.v1, pegtree.v2)
+		return tb
+    elseif isempty(pegtree) then
+    	tb.empty = true
+        return tb
+    elseif isany(pegtree) then
+    	tb.any = true
+        return tb
+    elseif isord(pegtree) then
+    	local tb1 = first(pegtree.p1, g)
+    	local tb2 = first(pegtree.p2, g)
+    	tb.set = tb1.set .. tb2.set
+    	tb.empty = tb1.empty or tb2.empty
+    	tb.any = tb1.any or tb2.any
+        return tb
+    -- special case for the not predicate
+    --elseif iscon(pegtree) and isnot(pegtree.p1) then
+    	--
+    elseif iscon(pegtree) then
+    	tb = first(pegtree.p1, g)
+    	if tb.empty then
+    		local tb2 = first(pegtree.p2, g)
+    		tb.set = tb.set .. tb2.set
+    		tb.empty = tb2.empty
+    		tb.any = tb.any or tb2.any
+		end
+        return tb
+    elseif isstar(pegtree) or islazy(pegtree) or ispossv(pegtree) then
+    	tb = first(pegtree.p1, g)
+    	tb.empty = true
+    	return tb
+   	elseif isand(pegtree) then
+   		-- to be discussed
+   		tb = first(pegtree.p1, g)
+   		return tb
+   	elseif isnot(pegtree) then
+   		-- to be discussed
+   		return tb -- empty first set
+    elseif isplus(pegtree) then
+    	tb = first(pegtree.p1, g)
+    	return tb
+    elseif isquest(pegtree) then
+    	tb = first(pegtree.p1, g)
+    	tb.empty = true
+    	return tb
+    elseif isopencapt(pegtree) or isclosecapt(pegtree) then
+    	tb.empty = true
+    	return tb
+	elseif isvar(pegtree) then
+		pegtree = g[pegtree.v]
+		return first(pegtree, g)
+    end
+end
 
 -- print a PEG given in the form of a tree
 function ptree (p)
