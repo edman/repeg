@@ -115,77 +115,8 @@ function ispred(p)
 	return isand(p) or isnot(p)
 end
 
-function getOperator(p)
-	if isstar(p) then
-		return "*"
-	elseif isplus(p) then
-		return "+"
-	elseif isquest(p) then
-		return "?"
-	elseif islazy(p) then
-		return "*?"
-	elseif ispossv(p) then
-		return "*+"
-	elseif isand(p) then
-		return "&"
-	elseif isnot(p) then
-		return "!"
-	end
-end
-
--- print a PEG in the form of a tree
-function writepeg (p, incon)
-	-- traverse the tree recursively
-	if ischar(p) then
-		return "'" .. p.v .. "'"
-	elseif isrange(p) then
-		return "[" .. p.v1 .. "-" .. p.v2 .. "]"
-	elseif isset(p) then 
-		return "[" .. p.v .. "]"
-	elseif isempty(p) then
-		return "''"
-	elseif isany(p) then
-		return "."
-	elseif isord(p) then
-		local s1 = writepeg(p.p1, false)
-		local s2 = writepeg(p.p2, false)
-		if incon then
-			return '(' .. s1 .. " / " .. s2 .. ')'
-		else
-			return s1 .. " / " .. s2
-		end
-	elseif iscon(p) then
-		return writepeg(p.p1, true) .. "" .. writepeg(p.p2, true)
-	elseif isrept(p) then
-		local s = writepeg(p.p1)
-		local op = getOperator(p)
-		if isterm(p.p1) or isempty(p.p1) then
-			return s .. op
-		else
-			return "(" .. s .. ")" .. op
-		end
-	elseif ispred(p) then
-		local s = writepeg(p.p1)
-		local op = getOperator(p)
-		if isterm(p.p1) or isempty(p.p1) then
-			return op .. s
-		else
-			return op .. "(" .. s .. "("
-		end
-	elseif isopencapt(p) then
-		--return '{' .. p.v
-		return '{'
-	elseif isclosecapt(p) then
-		return '}'
-	elseif isvar(p) then
-		return p.v
-	else
-		error("Unknown kind: " .. p.kind)
-	end
-end
-
--- given the PEG in a tree, return the PEG defined
--- in terms of the lpeg library
+-- given the syntactic tree of PEG's rule, return the corresponding lpeg
+-- pattern
 function makepeg (p)
 	if ischar(p) then
 		return lpeg.P(p.v)
@@ -221,8 +152,6 @@ function makepeg (p)
 		return lpeg.Cc('open', p.v) * lpeg.Cp()
 	elseif isclosecapt(p) then
 		return lpeg.Cc('close') * lpeg.Cp()
-	-- when this function is called, all the tags refer to the
-	-- PEG syntax
 	else
 		error("Unknown kind: " .. p.kind)
 	end
@@ -248,7 +177,8 @@ local function getnextvar()
 	return 'V' .. zeros .. varnumber
 end
 
--- g -> tree of the PEG used to evaluate the pattern
+-- transformation function that turns the regex syntactic tree from p into a
+-- PEG syntactic tree in g
 function pi(g, p, k)
 	if isempty(p) then
 		return k
@@ -307,8 +237,22 @@ function pi(g, p, k)
 	end
 end
 
-function capturematch(subject, peg)
-    -- capt holds the captures found by lpeg
+function initialize_globals()
+	varnumber = 0
+	casas = 10
+	zeros = "0000"
+end
+
+-- print general information about the input
+function print_info(retree, g, subject)
+	print("Regex: ", utils.syntactic_tree_to_expression(retree))
+	print("Input: ", subject)
+	print("Arvore: " .. utils.syntactic_tree_to_string(retree))
+	print("PEG\n" .. utils.pegtable_to_string(g))
+end
+
+function handle_capture(subject, peg)
+	-- capt holds the captures found by lpeg
 	local capt = lpeg.Ct(peg):match(subject)
 
 	-- return nil if nothing was captured
@@ -316,7 +260,7 @@ function capturematch(subject, peg)
 		return nil
 	end
 
-    -- initialize control variables
+	-- initialize control variables
 	local indices = {}
 	local last = {}
 	local i = 1
@@ -342,37 +286,22 @@ function capturematch(subject, peg)
 	return indices
 end
 
-function initialize_globals()
-	varnumber = 0
-	casas = 10
-	zeros = "0000"
-end
-
--- print general information about the input
-function print_info(retree, g, subject)
-	print("Regex: ", writepeg(retree))
-	print("Input: ", subject)
-	print("Arvore: " .. ptree(retree))
-	print("PEG")
-	printpeg(g)
+-- matches the peg pattern to the given subject taking care of captures
+function handle_matching(peg, subject, has_captures)
+	local result
+	-- retree.capture is set to true in compile.lua when the pattern has captures
+	if has_captures then
+		result = handle_capture(subject, peg)
+	else
+		result = peg:match(subject)
+	end
+	return result
 end
 
 function peg_from_retree(retree)
 	local g = {}
 	g[init] = pi(g, retree, makeempty())
 	return g
-end
-
--- matches the peg pattern to the given subject taking care of captures
-function handle_matching(peg, subject, has_captures)
-	local result
-	-- retree.capture is set to true in compile.lua when the pattern has captures
-	if has_captures then
-		result = capturematch(subject, peg)
-	else
-		result = peg:match(subject)
-	end
-	return result
 end
 
 -- re --> regular expression described in a string
@@ -442,7 +371,7 @@ function eval_first(g)
 
 	-- get the syntactic tree to describe the FIRST set
 	local ftree = first_tree(pegtree, g)
-	print('Arvore FIRST: ' .. ptree(ftree))
+	print('Arvore FIRST: ' .. utils.syntactic_tree_to_string(ftree))
 
 	-- get the lpeg pattern to match the FIRST set
 	local fpeg = first(ftree)
@@ -651,58 +580,6 @@ function first_old(pegtree, g)
     end
 end
 
--- print a PEG given in the form of a tree
-function ptree (p)
-	if ischar(p) then
-		return "'" .. p.v .. "'"
-	elseif isrange(p) then
-		return "range{" .. p.v1 .. "-" .. p.v2 .. "}"
-	elseif isset(p) then
-		return "set{" .. p.v .. "}"
-	elseif isempty(p) then
-		return "empty"
-	elseif isany(p) then
-		return "any"
-	elseif isord(p) then
-		local s1 = ptree(p.p1)
-		local s2 = ptree(p.p2)
-		return "ord{" .. s1 .. ", " .. s2 .. "}"
-	elseif iscon(p) then
-		local s1 = ptree(p.p1)
-		local s2 = ptree(p.p2)
-		return "con{" .. s1 .. ", " .. s2 .. "}"
-	elseif isstar(p) then
-		local s = ptree(p.p1)
-		return 'star{' .. s .. '}'
-	elseif islazy(p) then
-		local s = writepeg(p.p1)
-		return 'lazy{' .. s .. '}'
-	elseif ispossv(p) then
-		local s = ptree(p.p1)
-		return "possv{" .. s .. "}"
-	elseif isand(p) then
-		local s = ptree(p.p1)
-		return 'and{' .. s .. '}'
-	elseif isnot(p) then
-		local s = ptree(p.p1)
-		return 'not{' .. s .. '}'
-	elseif isplus(p) then
-		local s = writepeg(p.p1)
-		return 'plus{' .. s .. '}'
-	elseif isquest(p) then
-		local s = writepeg(p.p1)
-		return 'quest{' .. s .. '}'
-	elseif isopencapt(p) then
-		return 'open_' .. p.v
-	elseif isclosecapt(p) then
-		return '_close'
-	elseif isvar(p) then
-		error("Shouldn't receive a variable here")
-	else
-		error("Unknown kind: " .. p.kind)
-	end
-end
-
 function createpattern(g)
 	local p = {}
 	-- pairs iterates over all the elements in a table using the function "next",
@@ -715,13 +592,5 @@ function createpattern(g)
 	end
 	p[1] = init
 	return lpeg.P(p)
-end
-
-function printpeg (g)
-	for k, v in pairs(g) do
-		local var = k
-		local pegtree = v
-		print(var, "->", writepeg(pegtree))
-	end
 end
 
