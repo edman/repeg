@@ -1,6 +1,7 @@
 module ("regex", package.seeall)
 local lpeg = require'lpeg'
 local compile = require'compile'
+local utils = require'utils'
 
 -- variable used to number the non-terminals of the final PEG
 local varnumber
@@ -51,9 +52,9 @@ function isany(p)
 	return cmpkind(p, tag.any)
 end
 
--- when the node has only a fixed value, having no more operators, that is, when
--- this is a terminal node
-local function isterm(p)
+-- returns true when the node has only a fixed value, having no more operators,
+-- that is, when this is a terminal node
+function isterm(p)
 	return ischar(p) or isrange(p) or isany(p) or isopencapt(p)
 		or isclosecapt(p) or isset(p)
 end
@@ -93,6 +94,7 @@ end
 function isand(p)
 	return cmpkind(p, tag.andp)
 end
+
 function isnot(p)
 	return cmpkind(p, tag.notp)
 end
@@ -239,7 +241,7 @@ end
 
 local function getnextvar()
 	varnumber = varnumber + 1
-	if (varnumber == casas) then
+	if varnumber == casas then
 		casas = casas * 10
 		zeros = zeros:sub(1, #zeros - 1)
 	end
@@ -306,16 +308,20 @@ function pi(g, p, k)
 end
 
 function capturematch(subject, peg)
-	local indices = {}
-	local last = {}
-	local i = 1
+    -- capt holds the captures found by lpeg
 	local capt = lpeg.Ct(peg):match(subject)
 
-	-- return nil if no pattern could be captured in "subject"
+	-- return nil if nothing was captured
 	if capt == nil then
 		return nil
 	end
 
+    -- initialize control variables
+	local indices = {}
+	local last = {}
+	local i = 1
+
+	-- process each of the captures to know its start and end
 	while i <= #capt do
 		if capt[i] =='open' then
 			indices[capt[i+1]] = {}
@@ -374,10 +380,8 @@ function ptree (p)
 	elseif isset(p) then
 		return "set{" .. p.v .. "}"
 	elseif isempty(p) then
-		--return "''"
 		return "empty"
 	elseif isany(p) then
-		--return "."
 		return "any"
 	elseif isord(p) then
 		local s1 = ptree(p.p1)
@@ -412,8 +416,8 @@ function ptree (p)
 		return 'open_' .. p.v
 	elseif isclosecapt(p) then
 		return '_close'
-	--elseif isvar(p) then
-		--return p.v
+	elseif isvar(p) then
+		error("Shouldn't receive a variable here")
 	else
 		error("Unknown kind: " .. p.kind)
 	end
@@ -422,8 +426,8 @@ end
 function createpattern(g)
 	local p = {}
 	-- pairs iterates over all the elements in a table using the function "next",
-	-- which does not ensure any order on the traverse
-	--
+	-- which does not ensure any order on the traversal
+	-- --
 	-- ipairs iterates sequencially over integer indices, starting at 1 with
 	-- unitary increments until it finds the first nil value in the table
 	for k, v in pairs(g) do
@@ -435,7 +439,9 @@ end
 
 function printpeg (g)
 	for k, v in pairs(g) do
-		print(k, "->", writepeg(v))
+		local var = k
+		local pegtree = v
+		print(var, "->", writepeg(pegtree))
 	end
 end
 
